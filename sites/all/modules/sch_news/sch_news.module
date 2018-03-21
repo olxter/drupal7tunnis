@@ -1,0 +1,125 @@
+<?php
+
+function sch_news_menu() {
+  $items['performances'] = array(
+    'page callback' => 'sch_news_performances',
+    'access arguments' =>TRUE,
+  );
+  return $items;
+}
+
+function sch_news_block_info() {
+  // This example comes from node.module.
+  $blocks['front_news'] = array( //front_news = Blocki masinanimi
+    'info' => t('Esilehe uudised'),
+    'cache' => DRUPAL_NO_CACHE
+  );
+
+
+  return $blocks;
+}
+
+function sch_news_block_view($delta = '') {
+  // This example is adapted from node.module.
+  $block = array();
+
+  switch ($delta) {
+    case 'front_news': //front_news = bloki masinanimi tuleb block info seest
+      $block['subject'] = '';
+      $block['content'] = array(
+          '#type' => 'markup',
+          '#markup' => sch_news_news_html(),
+      );
+      break;
+
+    
+  }
+  return $block;
+}
+
+function sch_news_news_html() {
+  $result = db_select('node', 'n')
+    ->fields('n')
+    ->condition('n.status', 0,'>')
+    ->condition('n.type','article','=')
+    ->orderBy('n.created')
+    ->range(0,3)
+    ->execute()
+    ->fetchAll();
+    // krumo($result);
+    $output=''; //deklareerin string tüüpi muutuja
+    if (!empty($result)) { //kontrollin, kas päring andis tulemusi
+        $output.='<h3>' .t ('News').'</h3>'; //kirjutame blokil pealkirja
+        foreach ($result as $node) { //käime kõik päringu tulemused järjest läbi
+            // krumo($node); //debugimise käsk
+            $node=node_load($node->nid); //kasutame drupali funktsiooni node_load kõikide väljade kättesaamiseks
+            // krumo($node);
+            $body=$node->body['und'][0]['value']; //kirjutame body muutujasse artikli sisu
+            $body_lenght=strlen($body);
+            $output.='<div class="panel panel-default">
+                <div class="panel-heading">'.$node->title.'</div>
+                    <div class="panel-body">
+                    '.substr($body,0,100);
+                    $output.='<div id="'.$node->nid.'" class="collapse">
+                        '.substr($body,100,$body_lenght).'
+                        </div>';
+                    $output.='<a data-toggle="collapse" data-target="#' .$node->nid.'">Loe rohkem</a>';
+                     $output.='
+                    
+  </div>
+</div>';
+        }
+    }
+return $output;
+}
+
+function sch_news_performances(){
+  $build=array();
+  $build['performances']=array(
+    '#type'=>'markup',
+    '#markup'=>sch_news_performances_html(),
+    );
+    return $build;
+}
+function sch_news_performances_html(){
+  
+   $result = db_select('node', 'n')
+    ->fields('n')
+    ->condition('n.status', 0,'>')
+    ->condition('n.type','performances','=')
+    ->orderBy('n.created')
+    ->range()
+    ->execute()
+    ->fetchAll();
+   
+    $output='';
+    $output.='<div class="row">';
+    foreach ($result as $performance) {
+      $output.=sch_news_performance_html($performance);
+    }
+    $output.='</div>';
+    return $output;
+}
+function sch_news_performance_html($performance){
+  $output='';
+  $performance=node_load($performance->nid);
+  $image_uri = $performance->field_tunnuspilt['und'][0]['uri'];
+  $image_url = image_style_url('large', $image_uri);
+  $body=$performance->body['und'][0]['value'];
+  $url=url('node/'.$performance->nid);
+  
+  $output.=' <div class="col-xs-6 col-md-3">
+    <a href="'.$url.'" class="thumbnail">
+      <img src="'.$image_url.'" style="max_height:100px;" alt="...">
+      <h3>'.$performance->title.'</h3>
+        <p style="color:black;">'.substr($body,0,100).'</p>
+    </a>
+  </div>';
+ 
+  
+   
+   
+   
+  
+  return $output;
+}
